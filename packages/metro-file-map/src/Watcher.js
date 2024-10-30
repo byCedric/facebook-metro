@@ -25,6 +25,7 @@ import watchmanCrawl from './crawlers/watchman';
 import {ADD_EVENT, CHANGE_EVENT} from './watchers/common';
 import FSEventsWatcher from './watchers/FSEventsWatcher';
 import NodeWatcher from './watchers/NodeWatcher';
+import LegacyNodeWatcher from './watchers/LegacyNodeWatcher';
 import WatchmanWatcher from './watchers/WatchmanWatcher';
 import EventEmitter from 'events';
 import * as fs from 'fs';
@@ -35,6 +36,7 @@ import {performance} from 'perf_hooks';
 const debug = require('debug')('Metro:Watcher');
 
 const MAX_WAIT_TIME = 240000;
+const NODE_MAJOR_VERSION = Number(process.versions.node.split('.', 1)[0]);
 
 type CrawlResult = {
   changedFiles: FileData,
@@ -178,7 +180,9 @@ export class Watcher extends EventEmitter {
       ? WatchmanWatcher
       : FSEventsWatcher.isSupported()
         ? FSEventsWatcher
-        : NodeWatcher;
+        : NODE_MAJOR_VERSION < 20
+          ? LegacyNodeWatcher
+          : NodeWatcher;
 
     let watcher = 'node';
     if (WatcherImpl === WatchmanWatcher) {
