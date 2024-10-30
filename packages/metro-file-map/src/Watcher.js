@@ -175,20 +175,22 @@ export class Watcher extends EventEmitter {
   ) {
     const {extensions, ignorePattern, useWatchman} = this._options;
 
-    // WatchmanWatcher > FSEventsWatcher > sane.NodeWatcher
+    // WatchmanWatcher > NodeWatcher > FSEventsWatcher > LegacyNodeWatcher / sane.NodeWatcher
     const WatcherImpl = useWatchman
       ? WatchmanWatcher
-      : FSEventsWatcher.isSupported()
-        ? FSEventsWatcher
-        : NODE_MAJOR_VERSION < 20
-          ? LegacyNodeWatcher
-          : NodeWatcher;
+      : NODE_MAJOR_VERSION >= 20
+        ? NodeWatcher
+        : FSEventsWatcher.isSupported()
+          ? FSEventsWatcher
+          : LegacyNodeWatcher;
 
     let watcher = 'node';
     if (WatcherImpl === WatchmanWatcher) {
       watcher = 'watchman';
     } else if (WatcherImpl === FSEventsWatcher) {
       watcher = 'fsevents';
+    } else if (WatcherImpl === LegacyNodeWatcher) {
+      watcher = 'node-legacy';
     }
     debug(`Using watcher: ${watcher}`);
     this._options.perfLogger?.annotate({string: {watcher}});

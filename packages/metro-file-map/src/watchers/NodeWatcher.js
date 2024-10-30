@@ -66,7 +66,9 @@ module.exports = class NodeWatcher extends EventEmitter {
     common.recReaddir(
       this.root,
       dir => {
-        this._watchdir(dir);
+        if (dir !== this.root) {
+          this._register(dir, 'd');
+        }
       },
       filename => {
         this._register(filename, 'f');
@@ -163,13 +165,16 @@ module.exports = class NodeWatcher extends EventEmitter {
 
   /**
    * Watch a directory.
+   * This also watches all files/folders within this directory
    */
   _watchdir: string => boolean = (dir: string) => {
     if (this.watched[dir]) {
       return false;
     }
-    const watcher = fs.watch(dir, {persistent: true}, (event, filename) =>
-      this._normalizeChange(dir, event, filename),
+    const watcher = fs.watch(
+      dir,
+      {persistent: true, recursive: true},
+      (event, filename) => this._normalizeChange(dir, event, filename),
     );
     this.watched[dir] = watcher;
 
@@ -297,7 +302,7 @@ module.exports = class NodeWatcher extends EventEmitter {
         common.recReaddir(
           path.resolve(this.root, relativePath),
           (dir, stats) => {
-            if (this._watchdir(dir)) {
+            if (this._register(dir, 'd')) {
               this._emitEvent(ADD_EVENT, path.relative(this.root, dir), {
                 modifiedTime: stats.mtime.getTime(),
                 size: stats.size,
